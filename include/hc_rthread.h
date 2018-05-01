@@ -57,6 +57,7 @@ void hc_rthread_join(hc_rthread_t *ctx)
 {
 	pthread_join(ctx->thread, NULL);
 	pipe_producer_free(ctx->dst);
+	hc_fastq_close_many(2, ctx->parsers);
 	free(ctx);
 }
 

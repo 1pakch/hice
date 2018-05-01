@@ -17,3 +17,12 @@ bin/%: ${HEADERS} pipe minimap2 ${MM2LIB} src/$$(@F).c
 
 test: bin/hice-map
 	cd testdata && ${PWD}/$< chrM.fa read1.fa read2.fa
+
+memcheck: bin/hice-map
+	cd testdata && valgrind \
+		--verbose \
+		--show-leak-kinds=all \
+		--leak-check=full \
+		--track-origins=yes \
+		--log-file=../hice-map.valgrind.log \
+		${PWD}/bin/hice-map chrM.fa read1.fa read2.fa
