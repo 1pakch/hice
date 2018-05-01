@@ -10,7 +10,8 @@ HEADERS=$(wildcard include/*.h)
 minimap2/libminimap2.a: $(wildcard minimap2/*.h) $(wildcard minimap2/*.c)
 	cd minimap2 && make
 
-bin/%: ${HEADERS} pipe minimap2 ${MM2LIB}
+.SECONDEXPANSION:
+bin/%: ${HEADERS} pipe minimap2 ${MM2LIB} src/$$(@F).c
 	mkdir -p bin
 	${CC} ${CFLAGS} ${INC} src/$(@F).c ${MM2LIB} pipe/pipe.c -lm -lpthread -lz -o $@
 
