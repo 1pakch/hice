@@ -23,9 +23,9 @@ void *worker(void *ctx_)
 	char *pos;
 	size_t n;
 
-	while (n = pipe_pop(ctx->pipe, buf, BUFSIZE)) {
+	while ((n = pipe_pop(ctx->pipe, buf, BUFSIZE))) {
 		pos = str;
-		pos += sprintf(pos, "T%2d:%3d items: ", ctx->id, n) ;
+		pos += sprintf(pos, "T%2d:%3zd items: ", ctx->id, n) ;
 		for (int i=0; i < n; ++i) {
 			pos += sprintf(pos, "%4d", buf[i]);
 		}
@@ -34,6 +34,7 @@ void *worker(void *ctx_)
 		printf("%s", str);
 	}
 	printf("T%2d: pipe is empty and closed, terminating...\n", ctx->id);
+	return NULL;
 }
 
 int main()
@@ -54,7 +55,7 @@ int main()
 
 	for (int i=0; i<PUSHLEN; ++i) {
 		int buf[PUSHLEN];
-		for (int j=0; j<PUSHLEN; buf[j++]= i*PUSHLEN+j);
+		for (int j=0; j<PUSHLEN; buf[j]= i*PUSHLEN+j, ++j);
 		pipe_push(pipe, buf, PUSHLEN); 
 	}
 	pipe_producer_free(pipe);
