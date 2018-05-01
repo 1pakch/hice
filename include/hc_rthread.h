@@ -40,12 +40,12 @@ void* hc_rthread_entry(void *ctx_)
 	return NULL;
 }
 
-hc_rthread_t* hc_rthread_create(char **fnames, pipe_t* dst)
+hc_rthread_t* hc_rthread_create(char **fnames, pipe_t* dst, size_t bufsize)
 {
 	hc_rthread_t *ctx = (hc_rthread_t*) malloc(sizeof(hc_rthread_t));
 	if (!hc_fastq_open_many(2, fnames, ctx->parsers)) {
 		ctx->dst = pipe_producer_new(dst);
-		ctx->bufsize = 100;
+		ctx->bufsize = bufsize;
 		pthread_create(&ctx->thread, NULL, hc_rthread_entry, ctx);
 		return ctx;
 	} else {

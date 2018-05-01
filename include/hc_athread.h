@@ -76,14 +76,15 @@ void* hc_athread_entry(void *ctx_)
 	return NULL;
 }
 
-hc_athread_t* hc_athread_create(mm_idx_t *idx, mm_mapopt_t *mapopt, pipe_t *src, pipe_t *dst)
+hc_athread_t* hc_athread_create(mm_idx_t *idx, mm_mapopt_t *mapopt, pipe_t *src,
+				pipe_t *dst, size_t bufsize)
 {
 	hc_athread_t *ctx = (hc_athread_t*) malloc(sizeof(hc_athread_t));
 	ctx->idx = idx;
 	ctx->mapopt = mapopt;
 	ctx->src = pipe_consumer_new(src);
 	ctx->dst = pipe_producer_new(dst);
-	ctx->bufsize = 10;
+	ctx->bufsize = bufsize;
 	pthread_create(&ctx->thread, NULL, hc_athread_entry, ctx);
 	return ctx;
 }

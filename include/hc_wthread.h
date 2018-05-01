@@ -45,11 +45,11 @@ void* hc_wthread_entry(void *ctx_)
 	return NULL;
 }
 
-hc_wthread_t* hc_wthread_create(pipe_t* src)
+hc_wthread_t* hc_wthread_create(pipe_t* src, size_t bufsize)
 {
 	hc_wthread_t *ctx = (hc_wthread_t*) malloc(sizeof(hc_wthread_t));
 	ctx->src = pipe_consumer_new(src);
-	ctx->bufsize = 1000;
+	ctx->bufsize = bufsize;
 	pthread_create(&ctx->thread, NULL, hc_wthread_entry, ctx);
 	return ctx;
 }
