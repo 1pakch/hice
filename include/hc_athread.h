@@ -33,20 +33,58 @@ mm_extra_t* hc_mm_copy_extra(mm_extra_t* src)
 	return dst;
 }
 
+mm_reg1_t* hc_mm_copy_reg1(mm_reg1_t* src)
+{
+	mm_reg1_t* res = (mm_reg1_t*) malloc(sizeof(mm_reg1_t));
+	*res = *src;
+	res->p = hc_mm_copy_extra(src->p);
+	return res;
+}
+
+
+void hc_mm_write_cs(void *km, kstring_t *s, const mm_idx_t *mi, const mm_bseq1_t *t, const mm_reg1_t *r)
+{
+	extern unsigned char seq_nt4_table[256];
+	int i;
+	uint8_t *qseq, *tseq;
+	char *tmp;
+	if (r->p == 0) return;
+	qseq = (uint8_t*)kmalloc(km, r->qe - r->qs);
+	tseq = (uint8_t*)kmalloc(km, r->re - r->rs);
+	tmp = (char*)kmalloc(km, r->re - r->rs > r->qe - r->qs? r->re - r->rs + 1 : r->qe - r->qs + 1);
+	mm_idx_getseq(mi, r->rid, r->rs, r->re, tseq);
+	if (!r->rev) {
+		for (i = r->qs; i < r->qe; ++i)
+			qseq[i - r->qs] = seq_nt4_table[(uint8_t)t->seq[i]];
+	} else {
+		for (i = r->qs; i < r->qe; ++i) {
+			uint8_t c = seq_nt4_table[(uint8_t)t->seq[i]];
+			qseq[r->qe - i - 1] = c >= 4? 4 : 3 - c;
+		}
+	}
+	if (is_MD) write_MD_core(s, tseq, qseq, r, tmp);
+	else write_cs_core(s, tseq, qseq, r, tmp, no_iden);
+	kfree(km, qseq); kfree(km, tseq); kfree(km, tmp);
+}
+
+
 mm_reg1_t* hc_mm_best_hit(hc_athread_t *ctx, hc_str_t seq, mm_tbuf_t *tbuf)
 {
 	mm_reg1_t *hits, *best;
 	int n_hits;
 	hits = mm_map(ctx->idx, seq.len, seq.data, &n_hits, tbuf, ctx->mapopt, 0);
 	if (n_hits) {
+#ifdef HC_ATHREAD_COPY
 		// copy first (best) hit
-		//best = (mm_reg1_t*) malloc(sizeof(mm_reg1_t));
-		//*best = *hits;
-		//if (hits->p) best->p = hc_mm_copy_extra(hits->p);
+		best = hc_mm_copy_reg1(hits);
 		// free original hits
-		//for (int i=0; i<n_hits; ++i) free(hits[i].p);
-		//free(hits);
-		return hits;
+		for (int i=0; i<n_hits; ++i) {
+			free(hits[i].p);
+		}
+		free(hits);
+#else
+		best = hits;
+#endif
 	} else {
 		// return a hit with rid = UINT8_MAX if no hits
 		best = (mm_reg1_t*) calloc(1, sizeof(mm_reg1_t));
