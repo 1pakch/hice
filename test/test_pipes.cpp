@@ -1,12 +1,10 @@
-#include <unistd.h>
 #include <cstdio>
 #include <thread>
-#include <memory>
 
 #include <hice/pipe.hpp>
 
+
 using namespace hc;
-using namespace hc::pipe;
 
 
 void* produce(Producer<int> p) {

@@ -1,36 +1,23 @@
 #pragma once
 
 #include <memory>
-#include <type_traits>
 #include <utility>
-#include <tuple>
 #include <vector>
 
 #include <pipe/pipe.h>
-#include <hice/utils.hpp>
+
+#include <hice/unique_ptr.hpp>
 
 
 namespace hc {
-namespace pipe {
 
 namespace impl {
 
-//! Defines a deleter struct compaitble with std::unique_ptr
-template<typename T, void (*f)(T* p)>
-struct pointer_deleter {
-	inline void operator()(T* p){ f(p); }
-};
+using pipe_handle = hc::unique_ptr<pipe_t, pipe_free>;
+using producer_handle = hc::unique_ptr<pipe_producer_t, pipe_producer_free>;
+using consumer_handle = hc::unique_ptr<pipe_consumer_t, pipe_consumer_free>;
 
 }
-
-// Untyped producers/consumers wrapped via std::unique_ptr
-template<typename T, void (*f)(T* p)>
-using handle = std::unique_ptr<T, impl::pointer_deleter<T, f>>;
-
-using pipe_handle = handle<pipe_t, pipe_free>;
-using producer_handle = handle<pipe_producer_t, pipe_producer_free>;
-using consumer_handle = handle<pipe_consumer_t, pipe_consumer_free>;
-
 
 template<typename T> class Pipe;
 template<typename T> class Consumer;
@@ -41,7 +28,7 @@ template<typename T>
 class Pipe {
 
   protected:
-    pipe_handle h_;
+    impl::pipe_handle h_;
     template<typename> friend class Consumer;
     template<typename> friend class Producer;
 
@@ -68,7 +55,7 @@ class Producer {
 
   private:
 
-    producer_handle h_;
+    impl::producer_handle h_;
     std::vector<T> buf_;
     size_t pos_ = 0;
 
@@ -115,7 +102,7 @@ template<typename T>
 class Consumer {
 
   private:
-    consumer_handle h_;
+    impl::consumer_handle h_;
     std::vector<T> buf_;
 
   public:
@@ -140,5 +127,4 @@ class Consumer {
     }
 };
 
-} // pipes
 } // hc
