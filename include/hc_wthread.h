@@ -19,11 +19,22 @@ typedef struct {
 } hc_wthread_t;
 
 
-static inline void print_alignment2(mm_reg1_t *r)
+
+static inline void print_alignment2(hc_mapped_t r)
 {
-	printf("%d \t %d \t %d \t %c \t %d \t %d \t %d \t %d \t %d\n",
-		r->rid, r->rs, r->re, "+-"[r->rev], r->qs, r->qe,
-		r->mlen, r->blen, r->mapq);
+	static const char no_tag[] = "<none>";
+	const char *csstr = r.details && r.details->alstr ? r.details->alstr->s : no_tag;
+	printf("%d \t %d \t %d \t %c \t %u \t %d \t %s \n",
+		r.rid1,	// index of the reference sequence
+		r.rs, 		// reference start (0-based, closed)
+		r.re, 		// reference end   (0-based, open)
+		"+-"[r.rev],	// strand
+		//r->qs, 		// query start (0-based, closed)
+		//r->qe, 		// query end (0-based, open)
+		//r->mlen,	// seeded exact match length
+		r.primary,	// seeded alignment block length
+		r.mapq,	// MAPQ (<=60)
+		csstr);
 }
 
 void* hc_wthread_entry(void *ctx_)
@@ -32,14 +43,24 @@ void* hc_wthread_entry(void *ctx_)
 	hc_mapped_pair_t* inbuf = (hc_mapped_pair_t*) malloc(sizeof(hc_mapped_pair_t)*ctx->bufsize);
 	size_t n;
 
+	//printf("%d\n", sizeof(hc_aln8_t));
+	//printf("%d\n", sizeof(mm_reg1_t));
 	while ((n = pipe_pop(ctx->src, inbuf, ctx->bufsize))) {
 		for (int i=0; i<n; ++i) {
 			print_alignment2(inbuf[i].first);
 			print_alignment2(inbuf[i].second);
-			free(inbuf[i].first->p);
-			free(inbuf[i].second->p);
+			/*
+			if (inbuf[i].first.details) {
+				free(cs1->s);
+				free(cs1);
+			}
+			if (cs2) {
+				free(cs2->s);
+				free(cs2);
+			}
 			free(inbuf[i].first);
 			free(inbuf[i].second);
+			*/
 		}
 	}
 	return NULL;

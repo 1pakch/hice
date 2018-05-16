@@ -1,13 +1,15 @@
-all: bin/hice-map bin/pipes
+all: test/test_map_ctx
 
 CFLAGS=-std=c99 -Wall -g
-INC=-Iminimap2 -Ipipe -Iinclude
+INC=-I${CURDIR} -I${CURDIR}/minimap2 -I${CURDIR}/fmt/include
 CC=gcc
+CX=g++ -O3 -std=c++17
 
 MM2LIB=minimap2/libminimap2.a
-HEADERS=$(wildcard include/*.h)
+FMTLIB=fmt/libfmt.a
+HEADERS=$(wildcard include/*.h) $(wildcard include/*.hpp)
 
-minimap2/libminimap2.a: $(wildcard minimap2/*.h) $(wildcard minimap2/*.c)
+MM2LIB: $(wildcard minimap2/*.h) $(wildcard minimap2/*.c)
 	cd minimap2 && make
 
 .SECONDEXPANSION:
@@ -15,8 +17,30 @@ bin/%: ${HEADERS} pipe minimap2 ${MM2LIB} src/$$(@F).c
 	mkdir -p bin
 	${CC} ${CFLAGS} ${INC} src/$(@F).c ${MM2LIB} pipe/pipe.c -lm -lpthread -lz -o $@
 
-test: bin/hice-map
+runtest: bin/hice-map
 	cd testdata && ${PWD}/$< chrM.fa read1.fa read2.fa
+
+OBJS=hice/map_ctx.o pipe/pipe.o
+LIBS=-lm -lpthread -lz ${MM2LIB}
+
+pipe/pipe.o: pipe/pipe.c pipe/pipe.h
+	${CC} ${CFLAGS} ${INC} -c -o $@ $<
+
+hice/%.o: hice/%.c hice/%.h ${HEADERS}
+	${CC} ${CFLAGS} ${INC} -c -o $@ $<
+
+test/%: test/%.c hice/map_ctx.o ${HEADERS} ${OBJS}
+	mkdir -p bin
+	${CC} ${CFLAGS} ${INC} $< ${OBJS} ${LIBS} -o $@
+
+test/%: test/%.cpp hice/map_ctx.o ${HEADERS} ${OBJS}
+	mkdir -p bin
+	${CX} ${CXFLAGS} ${INC} $< ${LIBS} -o $@
+
+clean:
+	rm -rf hice/*.o
+	rm -rf pipe/pipe.o
+	#cd test && (ls | grep -v -P '.c$' | xargs rm)	
 
 memcheck: bin/hice-map
 	cd testdata && valgrind \

@@ -1,5 +1,4 @@
-#ifndef HC_FASTQ
-#define HC_FASTQ
+#pragma once
 
 #include <zlib.h>
 
@@ -29,6 +28,15 @@ int hc_fastq_open(char* fname, hc_fastq_parser_t *parser)
 	return 0;
 }
 
+int hc_fastq_open_many(size_t n, char* fnames[], hc_fastq_parser_t parsers[])
+{
+	int i, err = 0;
+	for (i=0; !err && i<n; ++i) {
+		err = hc_fastq_open(fnames[i], &parsers[i]);
+	}
+	return err;
+}
+
 static inline int hc_fastq_next(hc_fastq_parser_t parser)
 {
 	return kseq_read(parser.current_read) >= 0;
@@ -40,14 +48,6 @@ void hc_fastq_close(hc_fastq_parser_t parser)
 	gzclose(parser.file);
 }
 
-int hc_fastq_open_many(size_t n, char* fnames[], hc_fastq_parser_t parsers[])
-{
-	int i, err = 0;
-	for (i=0; !err && i<n; ++i) {
-		err = hc_fastq_open(fnames[i], &parsers[i]);
-	}
-	return err;
-}
 
 int hc_fastq_read_paired(hc_fastq_parser_t parsers[])
 {
@@ -65,4 +65,3 @@ void hc_fastq_close_many(size_t n, hc_fastq_parser_t parsers[])
 	}
 }
 
-#endif
