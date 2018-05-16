@@ -33,9 +33,9 @@ test/%: test/%.c hice/map_ctx.o ${HEADERS} ${OBJS}
 	mkdir -p bin
 	${CC} ${CFLAGS} ${INC} $< ${OBJS} ${LIBS} -o $@
 
-test/%: test/%.cpp hice/map_ctx.o ${HEADERS} ${OBJS}
+bin/test_%: test/test_%.cpp hice/map_ctx.o ${HEADERS} ${OBJS}
 	mkdir -p bin
-	${CX} ${CXFLAGS} ${INC} $< ${LIBS} -o $@
+	${CX} ${CXFLAGS} ${INC} $< ${OBJS} ${LIBS} -o $@
 
 clean:
 	rm -rf hice/*.o

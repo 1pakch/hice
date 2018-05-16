@@ -4,21 +4,11 @@
 #include <sstream>
 #include <string>
 
-#include <cxxabi.h>
+#include <hice/utils.hpp>
 
 namespace hc {
 
 namespace impl {
-
-template<typename T>
-std::string type_name() {
-	int status;
-	const char *mangled = typeid(T).name();
-	char *demangled = abi::__cxa_demangle(mangled, NULL, NULL, &status);
-	auto result = std::string(0==status ? demangled : mangled);
-	if (!status) std::free(demangled);
-	return std::move(result);
-}
 
 template<typename T>
 std::ostream& logargs(int i, std::ostream& o, const T& t) {
