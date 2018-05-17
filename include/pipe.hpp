@@ -4,6 +4,7 @@
 #include <utility>
 #include <vector>
 
+
 #include <pipe/pipe.h>
 
 #include <hice/unique_ptr.hpp>
@@ -19,12 +20,14 @@ using consumer_handle = hc::unique_ptr<pipe_consumer_t, pipe_consumer_free>;
 
 }
 
-template<typename T> class Pipe;
 template<typename T> class Consumer;
 template<typename T> class Producer;
 
+template<class T>
+using vector_ptr = std::unique_ptr<std::vector<T>>;
 
-template<typename T>
+//! Thread-safe multi-producer multi-consumer queue
+template<typename T, typename Chunk=std::vector<T>>
 class Pipe {
 
   protected:
@@ -34,7 +37,7 @@ class Pipe {
 
   public:
 
-    Pipe(size_t limit=0): h_(pipe_new(sizeof(T), limit)) {}
+    Pipe(size_t limit=0): h_(pipe_new(sizeof(vector_ptr<T>), limit)) {}
     Pipe(Pipe&&) = default;
     Pipe& operator=(Pipe&&) = default;
 
@@ -56,43 +59,55 @@ class Producer {
   private:
 
     impl::producer_handle h_;
-    std::vector<T> buf_;
-    size_t pos_ = 0;
+    vector_ptr<T> chunk_ptr_;
+    size_t bufsize_;
+
+    void reset() {
+	chunk_ptr_ = std::make_unique<std::vector<T>>();
+	chunk_ptr_->reserve(bufsize_);
+    }
 
   public:
 
     Producer(Pipe<T>& pipe, size_t bufsize):
 	h_(pipe_producer_new(pipe.h_.get())),
-	buf_(bufsize)
-    {}
-    
-    size_t capacity() const { return buf_.size(); }
-    size_t count() const { return pos_; } 
+	bufsize_(bufsize)
+    {
+	reset();
+    }
+
+    Producer(Producer&&) = default;
+    Producer& operator=(Producer&&) = default;
+
+    ~Producer() { if (h_ && !empty()) send(); }
+
+    size_t capacity() const { return chunk_ptr_->capacity(); }
+    size_t count() const { return chunk_ptr_->size(); } 
     bool empty() const { return count() == 0; };
     bool full() const { return count() == capacity()-1; }
     
-    void clear() { pos_ = 0; } 
-
-    template<class T_=T>
-    typename std::enable_if<std::is_trivially_copyable<T_>::value, bool>::type
-    push(T val) {
-	buf_[pos_++] = val;
+    //template<class T_=T>
+    //typename std::enable_if<std::is_trivially_copyable<T_>::value, bool>::type
+    bool push(T&& val) {
+	chunk_ptr_->emplace_back(std::forward<T>(val));
 	if (full()) { send(); return true; }
 	else return false;
     }
     
-    template<class T_=T>
-    typename std::enable_if<!std::is_trivially_copyable<T_>::value, void>::type
-    push(T&& val) {
-	buf_[pos_++] = std::move(val);
-	if (full()) { send(); return true; }
-	else return false;
-    }
+    //template<class T_=T>
+    //typename std::enable_if<!std::is_trivially_copyable<T_>::value, bool>::type
+    //bool push(T&& val) {
+//	chunk_ptr_[pos_++] = std::move(val);
+//	if (full()) { send(); return true; }
+//	else return false;
+ //   }
 
     bool send() {
       if (empty()) return false;
-      pipe_push(h_.get(), buf_.data(), count());
-      pos_ = 0;
+      auto p = chunk_ptr_.release();
+      printf("sending %d size\n", p->size());
+      pipe_push(h_.get(), &p, 1);
+      reset();
       return true;
     }
 };
@@ -103,27 +118,20 @@ class Consumer {
 
   private:
     impl::consumer_handle h_;
-    std::vector<T> buf_;
 
   public:
     Consumer(Pipe<T>& pipe, size_t bufsize)
-      : h_(pipe_consumer_new(pipe.h_.get())),
-	buf_(bufsize)
+      : h_(pipe_consumer_new(pipe.h_.get()))
     {}
 
     Consumer(Consumer&& o) = default;
     Consumer& operator=(Consumer&&) = default;
 
-    template<class T_=T>
-    typename std::enable_if<std::is_trivially_copyable<T_>::value, T>::type
-    pop(size_t i) { return buf_[i]; }
-
-    template<class T_=T>
-    typename std::enable_if<!std::is_trivially_copyable<T_>::value, T&&>::type
-    pop(size_t i) { return std::move(buf_[i]); }
-
-    size_t recv() {
-      return pipe_pop(h_.get(), buf_.data(), buf_.size());
+    std::vector<T> recv() {
+      std::vector<T>* p;
+      auto popped = pipe_pop(h_.get(), &p, 1);
+      if (popped) printf("popped %d size %d\n", popped, p->size());
+      return popped ? std::move(*p) : std::vector<T>();
     }
 };
 

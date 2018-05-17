@@ -14,6 +14,9 @@ struct custom_deleter {
 
 }
 
+template<typename T>
+void noop_deleter(T* p){}
+
 // Untyped producers/consumers wrapped via std::unique_ptr
 template<typename T, void (*f)(T* p)>
 using unique_ptr = std::unique_ptr<T, impl::custom_deleter<T, f>>;
