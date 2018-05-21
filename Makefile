@@ -3,7 +3,7 @@ all: test/test_map_ctx
 CFLAGS=-std=c99 -Wall -g
 INC=-I${CURDIR} -I${CURDIR}/minimap2 -I${CURDIR}/fmt/include
 CC=gcc
-CX=g++ -g -std=c++17
+CX=g++ -g -Wall -std=c++17
 
 MM2LIB=minimap2/libminimap2.a
 FMTLIB=fmt/libfmt.a
