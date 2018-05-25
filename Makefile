@@ -3,11 +3,12 @@ all: test/test_map_ctx
 CFLAGS=-std=c99 -Wall -g
 INC=-I${CURDIR} -I${CURDIR}/minimap2 -I${CURDIR}/fmt/include
 CC=gcc
-CX=g++ -g -Wall -std=c++17
+CX=g++ -g -O0 -Wall -std=c++17
 
 MM2LIB=minimap2/libminimap2.a
 FMTLIB=fmt/libfmt.a
-HEADERS=$(wildcard include/*.h) $(wildcard include/*.hpp)
+HEADERS=$(wildcard include/*.h) $(wildcard include/*.hpp) $(wildcard include/mm2xx/*.hpp)
+
 
 MM2LIB: $(wildcard minimap2/*.h) $(wildcard minimap2/*.c)
 	cd minimap2 && make
@@ -36,6 +37,9 @@ test/%: test/%.c hice/map_ctx.o ${HEADERS} ${OBJS}
 bin/test_%: test/test_%.cpp hice/map_ctx.o ${HEADERS} ${OBJS}
 	mkdir -p bin
 	${CX} ${CXFLAGS} ${INC} $< ${OBJS} ${LIBS} -o $@
+
+src/%.o: src/%.cpp hice/%.hpp ${HEADERS}
+	${CX} ${CXFLAGS} ${INC} -c -o $@ $<
 
 clean:
 	rm -rf hice/*.o
