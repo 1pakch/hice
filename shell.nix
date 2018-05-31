@@ -10,6 +10,7 @@ stdenv.mkDerivation {
     pkgs.valgrind
     pkgs.gnumake
     pkgs.zlib
+    pkgs.clang_6
     #pkgs.pthreads
   ];
 }

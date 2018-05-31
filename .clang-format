@@ -1,0 +1,13 @@
+---
+Language:        Cpp
+BasedOnStyle:    LLVM
+BreakConstructorInitializersBeforeComma: false
+BreakConstructorInitializers: BeforeComma
+SpaceAfterTemplateKeyword: false
+IndentWidth:     4
+Standard:        Cpp11
+TabWidth:        8
+UseTab:          Never
+MaxEmptyLinesToKeep: 2
+IncludeBlocks:   Preserve
+...
