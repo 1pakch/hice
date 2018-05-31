@@ -3,13 +3,13 @@
 #pragma once
 
 #include <minimap.h>
-#include <include/mm2xx/handles.hpp>
+#include <mm2xx/handles.hpp>
 
 
 namespace mm {
 
 
-//! Read an index containing 1 part at maximum
+//! Read or build an index containing 1 part at maximum
 handle<mm_idx_t> mm_idx_read1(const char* fname, const mm_idxopt_t* iopt,
 			      size_t n_indexing_threads)
 {
@@ -65,10 +65,27 @@ class Settings {
 	const mm_idxopt_t* idxopt() const { return idxopt_.get(); }
 	const mm_idx_t* idx() const { return idx_.get(); }
 
-	void set_reference(const char* path, size_t n_threads=4) {
+	//! Index a FASTA file or read an existing index
+	void index_file(const char* path, size_t n_threads=4) {
 		idx_ = std::move(mm_idx_read1(path, idxopt(), n_threads));
 		assert(idx_);
 		mm_mapopt_update(mapopt_.get(), idx_.get());
+	}
+
+	//! Index strings in memory
+	void index_strings(int n,
+			   const char **sequences,
+			   const char **names=nullptr) {
+		auto idx = mm_idx_str(idxopt()->w,
+				      idxopt()->k,
+				      idxopt()->flag & MM_I_HPC,
+				      idxopt()->bucket_bits,
+				      n,
+				      sequences,
+				      names);
+		assert(idx);
+		mm_mapopt_update(mapopt_.get(), idx);
+		idx_ = std::move(handle<mm_idx_t>(idx));
 	}
 };
 

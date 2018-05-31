@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <include/mm2xx/encoding.hpp>
+#include <mm2xx/encoding.hpp>
 
 
 namespace mm {

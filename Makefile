@@ -7,7 +7,7 @@ CX=g++ -g -O0 -Wall -std=c++17
 
 MM2LIB=minimap2/libminimap2.a
 FMTLIB=fmt/libfmt.a
-HEADERS=$(wildcard include/*.h) $(wildcard include/*.hpp) $(wildcard include/mm2xx/*.hpp)
+HEADERS=$(wildcard include/*.h) $(wildcard include/*.hpp) $(wildcard mm2xx/*.hpp)
 
 
 MM2LIB: $(wildcard minimap2/*.h) $(wildcard minimap2/*.c)
