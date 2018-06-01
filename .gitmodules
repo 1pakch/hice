@@ -2,3 +2,6 @@
 	path = minimap2
 	url = git@github.com:lh3/minimap2.git
 	branch = master
+[submodule "bpcqueue"]
+	path = bpcqueue
+	url = git@github.com:ilya-kolpakov/bpcqueue
