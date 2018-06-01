@@ -59,7 +59,10 @@ class Aligner: public AlignerBase {
     public:
 	Aligner(const Settings& settings): AlignerBase(settings, 1) {}
 	
-	Aligned<>* align(std::string const& query, const mm_reg1_t* hit) {
+	Aligned<> align(std::string const& query, const mm_reg1_t* hit) {
+		mm_reg1_t* hits
+		int n_hits;
+		_map(query, 
 		load_query(query, hit->rev);
 		load_ref(hit->rid, hit->rs, hit->re);
 		CsWriter csw(ref_enc(), query_enc(), hit->p);

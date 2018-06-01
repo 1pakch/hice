@@ -40,12 +40,7 @@ class gzfile {
 	gzfile(gzfile&&) = default;
 	gzfile& operator=(gzfile&&) = default;
 
-	~gzfile() {
-		auto p = f_.release();
-		if (!p) return;
-		int err = gzclose(p);
-		if(Z_OK != err) throw GzError(path_, "gzclose() failed", 0);
-	}
+	~gzfile() { if (f_) close(); }
 
 	size_t read(void *buf, unsigned len){
 		auto result = gzread(f_.get(), (void *)buf, len);
@@ -63,9 +58,15 @@ class gzfile {
 			throw GzError(path_, "gzread() failed", &s[0], len);
 		}
 		s.resize(*bytes_read);
-		printf("readstr %d\n", s.size());
 		return std::move(s);
 	};
+
+	void close() {
+		auto p = f_.release();
+		if (!p) return;
+		int err = gzclose(p);
+		if(Z_OK != err) throw GzError(path_, "gzclose() failed", 0);
+	}
 
 	const char* path() const { return path_.c_str(); }
 	const char* mode() const { return mode_.c_str(); }

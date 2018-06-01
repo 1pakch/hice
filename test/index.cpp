@@ -104,6 +104,6 @@ int main() {
 	
 	test_mapper(settings);
 	test_multi_mapper(settings);
-
+	
 	return 0;
 }

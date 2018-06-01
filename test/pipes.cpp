@@ -19,13 +19,11 @@ void* produce(Producer<int> p) {
 
 void* transform(Consumer<int> c, Producer <int> p) {
 	printf("T: mainloop\n");
-	size_t n;
-	while ((n = c.recv())) {
-		printf("T: received %zd items\n", n);
-		for (size_t i = 0; i < n; ++i) {
-			int x = c.pop(i);
-			p.push(x*2);
-		}
+	while (c) {
+		auto buf = c.recv();
+		printf("T: received %zd items\n", buf.size());
+		for (auto item: buf)
+			p.push(item*2);
 	}
 	p.send();
 	printf("T: ending\n");
@@ -35,9 +33,9 @@ void* transform(Consumer<int> c, Producer <int> p) {
 
 void* consume(Consumer<int> c) {
 	printf("C: mainloop\n");
-	size_t n;
-	while ((n = c.recv())) {
-		printf("C: received %zd items\n", n);
+	while (c) {
+		auto buf = c.recv();
+		printf("C: received %zd items\n", buf.size());
 	}
 	printf("C: ended\n");
 	return nullptr;
