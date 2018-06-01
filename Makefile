@@ -1,31 +1,24 @@
 all: test/test_map_ctx
 
-CFLAGS=-Wall -g
-INC=-I${CURDIR} -I${CURDIR}/minimap2 -I${CURDIR}/fmt/include
-CC=gcc
-CX=g++ -g -O0 -Wall
+INCLUDE=-I${CURDIR} -I${CURDIR}/minimap2 -I${CURDIR}/bpcqueue
+CXX=g++ -g -O0 -Wall ${INCLUDE}
 
 HEADERS=$(wildcard include/*.h) $(wildcard include/*.hpp) $(wildcard mm2xx/*.hpp)
 
-OBJS=
-LIBS=-lm -lpthread -lz ${MM2LIB}
 MM2LIB=minimap2/libminimap2.a
 MM2LIB: $(wildcard minimap2/*.h) $(wildcard minimap2/*.c)
 	cd minimap2 && make
 
-#hice/%.o: hice/%.c hice/%.h ${HEADERS}
-#	${CC} ${CFLAGS} ${INC} -c -o $@ $<
+LIBS=-lm -lpthread -lz ${MM2LIB}
 
-#test/%: test/%.c hice/map_ctx.o ${HEADERS} ${OBJS}
-#	mkdir -p bin
-#	${CC} ${CFLAGS} ${INC} $< ${OBJS} ${LIBS} -o $@
+OBJS=
 
 bin/test/%: test/%.cpp ${HEADERS} ${OBJS}
 	mkdir -p bin/test
-	${CX} ${CXFLAGS} ${INC} $< ${OBJS} ${LIBS} -o $@
+	${CXX} $< ${OBJS} ${LIBS} -o $@
 
 #src/%.o: src/%.cpp hice/%.hpp ${HEADERS}
-#	${CX} ${CXFLAGS} ${INC} -c -o $@ $<
+#	${CXX} ${CXFLAGS} ${INC} -c -o $@ $<
 
 .PHONY: clean
 clean:

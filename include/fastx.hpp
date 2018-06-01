@@ -3,7 +3,7 @@
 #include <string>
 #include <utility>
 
-#include "hice/gz.hpp"
+#include "hice/gzfile.hpp"
 
 
 namespace hc {

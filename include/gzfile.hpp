@@ -1,14 +1,12 @@
 #pragma once
 
+#include <memory>
 #include <string>
-#include <cmath>
-#include <type_traits>
 
 #include <zlib.h>
 
 #include <hice/exception.hpp>
-#include <hice/pipe.hpp>
-#include <hice/unique_ptr.hpp>
+#include <hice/memory.hpp>
 
 
 namespace hc {
@@ -17,13 +15,11 @@ class GzError: public hc::Exception {
 	using hc::Exception::Exception;
 };
 
-void gzclose_void(gzFile f){ return; }
-
 class gzfile {
     private:
 	const std::string path_;
 	const std::string mode_;
-	hc::unique_ptr<gzFile_s, noop_deleter> f_;
+        std::unique_ptr<gzFile_s, no_deleter<gzFile_s>> f_;
 
     public:
 	gzfile(const char *path, const char *mode, unsigned bufsize)
@@ -74,14 +70,5 @@ class gzfile {
 	bool eof() const { return gzeof(f_.get()); };
 	int offset() const { return gzoffset(f_.get()); };
 };
-
-
-void gz_read_into(Producer<std::string> p, gzfile f, size_t chunk_size) {
-	size_t bytes_read;
-	do {
-		p.push(std::move(f.readstr(chunk_size, &bytes_read)));
-	} while (bytes_read == chunk_size);
-}
-
 
 }

@@ -4,6 +4,12 @@
 
 namespace hc {
 
+template<typename T>
+struct no_deleter {
+    void operator()(T* p){}
+};
+
+
 namespace impl {
 
 //! Defines a deleter struct compaitble with std::unique_ptr

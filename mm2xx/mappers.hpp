@@ -19,7 +19,7 @@ class MapperBase {
     mm_mapopt_t mapopt_;
     handle<mm_tbuf_t> thread_buf_;
 
-  protected:
+  public:
     MapperBase(const Settings &settings, uint8_t n_max)
         : idx_(settings.idx())
         , mapopt_(*settings.mapopt())
@@ -34,7 +34,7 @@ class MapperBase {
     const mm_mapopt_t *mapopt() const { return &mapopt_; }
     const mm_idx_t *idx() const { return idx_; }
 
-    template<typename String> handle<mm_reg1_t[]> _map(String const &query) {
+    template<typename String> handle<mm_reg1_t[]> map(String const &query) {
         int n_hits;
         mm_reg1_t *hits = mm_map(idx(), query.size(), query.data(), &n_hits,
                                  thread_buf_.get(), mapopt(), nullptr);
@@ -53,7 +53,7 @@ class Mapper : protected MapperBase {
         : MapperBase(settings, 1) {}
 
     template<typename String> Mapped<> map(String const &query) {
-        auto hits = _map(query);
+        auto hits = MapperBase::map(this, query);
         return std::move(Mapped<>(query, hits.get()));
     }
 };
@@ -66,7 +66,7 @@ class MultiMapper : protected MapperBase {
         : MapperBase(settings, n_max) {}
 
     template<typename String> std::vector<Mapped<>> map(String const &query) {
-        auto hits = _map(query);
+        auto hits = MapperBase::map(this, query);
         std::vector<Mapped<>> result;
         for (auto hit : hits) {
             result.emplace_back(query, &hit);

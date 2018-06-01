@@ -4,16 +4,58 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include <bpcqueue.hpp>
+
 #include <mm2xx/mappers.hpp>
-#include <include/pipe.hpp>
+
+#include <hice/gzstream.hpp>
+
 
 #define NWORKERS 2
 
 
 using namespace mm;
 using namespace hc;
+using namespace bpcqueue;
 
-void parse(Consumer<std::string> c, Producer<std::string> p) {
+
+void split_lines(In<std::string> chunks, Out<std::string> lines,
+                 size_t take_every=1, size_t skip=0) {
+    std::string buf;
+    std::string tail;
+    size_t lineno = 0;
+    size_t start = 0;
+    auto take_this_line = [&](){
+        return lineno >= skip && (lineno - skip) % take_every; }
+    while (bufs.pop(buf)) {
+        for (size_t i=0; i<buf.size(); ++i) {
+            if (buf[i] == '\n') {
+                if (tail) {
+                    if (take_this_line()) {
+                        auto line = std::move(tail);
+                        line.append(buf, start, i);
+                        lines.push(line);
+                    }
+                    tail = std::string();
+                } else {
+                    if (take_this_line())
+                        lines.emplace(buf, start, i);
+                }
+                ++lineno;
+            }
+        }
+        tail = std::string(buf, start, i);
+    }
+}
+
+void parse_fasta(In<std::string> chunks, Producer<std::string> sequences) {
+    std::string chunk;
+    std::string tail;
+    size_t start = 0;
+    size_t lineno = 0;
+    while (chunks.pop(chunk)) {
+        
+    }
 }
 
 void map(const Settings& s, Consumer<std::string> c, Producer<handle<mm_reg1_t[]>> p) {
@@ -37,9 +79,11 @@ int main(int argc, char *argv[])
 	Settings s("sr");
 	s.index_file(argv[1]);
 
-	Pipe<std::string> chunks(4);
-	auto p = std::thread(gz_read_into, chunks.create_producer(4), gzfile(argv[1], "r", 4096), 4096);
-	auto c = std::thread(consume, chunks.create_consumer(4));
+	Queue<std::string> chunks(4);
+	Queue<std::string> sequences(4);
+
+	auto reader = std::thread(gzstream, output(chunks), gzfile(argv[1], "r", 4096), 4096);
+	auto parser = std::thread(parse_fasta, input(chunks), output(sequences));
 
 	printf("M: Closed pipes\n");
 	chunks.close();

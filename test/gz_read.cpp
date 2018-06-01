@@ -1,6 +1,7 @@
 #include <cstdio>
 #include <string>
 
+#include "hice/gzfile.hpp"
 #include "hice/fastx.hpp"
 #include "hice/timeit.hpp"
 
