@@ -7,10 +7,7 @@ CX=g++ -g -O0 -Wall
 
 HEADERS=$(wildcard include/*.h) $(wildcard include/*.hpp) $(wildcard mm2xx/*.hpp)
 
-OBJS=pipe/pipe.o
-pipe/pipe.o: pipe/pipe.c pipe/pipe.h
-	${CC} ${CFLAGS} ${INC} -c -o $@ $<
-
+OBJS=
 LIBS=-lm -lpthread -lz ${MM2LIB}
 MM2LIB=minimap2/libminimap2.a
 MM2LIB: $(wildcard minimap2/*.h) $(wildcard minimap2/*.c)

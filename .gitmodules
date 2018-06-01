@@ -2,7 +2,3 @@
 	path = minimap2
 	url = git@github.com:lh3/minimap2.git
 	branch = master
-[submodule "pipe"]
-	path = pipe
-	url = git@github.com:cgaebel/pipe.git
-	branch = lock_free
