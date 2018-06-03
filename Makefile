@@ -1,8 +1,16 @@
 TEST_TARGETS=$(shell ls test | sed 's|\([a-zA-Z_]\+\).cpp|bin/test/\1|')
 all: ${TEST_TARGETS}
 
+CXFLAGS=-std=c++14 -Wall
+DEBUG ?= 1
+ifeq ($(DEBUG), 1)
+    CXXFLAGS+=-O0 -g -DDEBUG
+else
+    CXXFLAGS+=-O3 -DNDEBUG -static-libstdc++ -static-libgcc
+endif
+
 INCLUDE=-I${CURDIR} -I${CURDIR}/minimap2 -I${CURDIR}/bpcqueue
-CXX=g++ -g -O0 -Wall -std=c++14 ${INCLUDE}
+CXX=g++ ${CXXFLAGS} ${INCLUDE}
 
 HEADERS=$(wildcard include/*.hpp) $(wildcard mm2xx/*.hpp)
 
