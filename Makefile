@@ -6,7 +6,7 @@ DEBUG ?= 1
 ifeq ($(DEBUG), 1)
     CXXFLAGS+=-O0 -g -DDEBUG
 else
-    CXXFLAGS+=-O3 -DNDEBUG -static-libstdc++ -static-libgcc
+    CXXFLAGS+=-O3 -DNDEBUG
 endif
 
 INCLUDE=-I${CURDIR} -I${CURDIR}/minimap2 -I${CURDIR}/bpcqueue
