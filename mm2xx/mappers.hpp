@@ -53,7 +53,7 @@ class Mapper : protected MapperBase {
         : MapperBase(settings, 1) {}
 
     template<typename String> Mapped<> map(String const &query) {
-        auto hits = MapperBase::map(this, query);
+        auto hits = MapperBase::map(query);
         return std::move(Mapped<>(query, hits.get()));
     }
 };
@@ -66,7 +66,7 @@ class MultiMapper : protected MapperBase {
         : MapperBase(settings, n_max) {}
 
     template<typename String> std::vector<Mapped<>> map(String const &query) {
-        auto hits = MapperBase::map(this, query);
+        auto hits = MapperBase::map(query);
         std::vector<Mapped<>> result;
         for (auto hit : hits) {
             result.emplace_back(query, &hit);

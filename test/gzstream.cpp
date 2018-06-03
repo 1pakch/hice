@@ -3,7 +3,6 @@
 #include <unistd.h>
 
 #include <bpcqueue.hpp>
-
 #include <hice/gzstream.hpp>
 
 

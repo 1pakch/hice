@@ -1,9 +1,10 @@
-all: test/test_map_ctx
+TEST_TARGETS=$(shell ls test | sed 's|\([a-zA-Z_]\+\).cpp|bin/test/\1|')
+all: ${TEST_TARGETS}
 
 INCLUDE=-I${CURDIR} -I${CURDIR}/minimap2 -I${CURDIR}/bpcqueue
 CXX=g++ -g -O0 -Wall ${INCLUDE}
 
-HEADERS=$(wildcard include/*.h) $(wildcard include/*.hpp) $(wildcard mm2xx/*.hpp)
+HEADERS=$(wildcard include/*.hpp) $(wildcard mm2xx/*.hpp)
 
 MM2LIB=minimap2/libminimap2.a
 MM2LIB: $(wildcard minimap2/*.h) $(wildcard minimap2/*.c)
@@ -22,9 +23,7 @@ bin/test/%: test/%.cpp ${HEADERS} ${OBJS}
 
 .PHONY: clean
 clean:
-	rm -rf hice/*.o
-	rm -rf pipe/pipe.o
-	#cd test && (ls | grep -v -P '.c$' | xargs rm)	
+	rm -rf bin
 
 memcheck: bin/hice-map
 	cd testdata && valgrind \
