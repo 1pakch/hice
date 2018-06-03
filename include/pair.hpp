@@ -14,7 +14,11 @@ class Pair: private std::pair<T, T> {
     using Base = std::pair<T, T>;
   public:
     using Base::pair;
- 
+
+#if (__GNUC__ == 6) && (__GNUC_MINOR__ < 4)
+    Pair() noexcept : Base() {}
+#endif
+
     Pair(Pair&& other) noexcept
         : Base::pair(std::move(other))
     {}

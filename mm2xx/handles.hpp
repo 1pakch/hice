@@ -67,6 +67,10 @@ class handle : public std::unique_ptr<T, impl::deallocate<T>> {
   public:
     using std::unique_ptr<T, impl::deallocate<T>>::unique_ptr;
 
+#if (__GNUC__ == 6) && (__GNUC_MINOR__ < 4)
+    handle() noexcept : Base(nullptr) {}
+#endif
+
     handle(handle &&v) noexcept
         : Base(std::move(v)) {}
 
@@ -96,7 +100,7 @@ class handle<T[]> : public std::unique_ptr<T[], impl::deallocate<T>> {
     }
 
   public:
-    handle() {} // base pointer is null-initialized
+    handle() noexcept : Base() {} // base pointer is null-initialized
 
     handle(T *p, size_t size) noexcept
         : Base(p)
