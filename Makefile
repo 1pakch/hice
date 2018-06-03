@@ -1,5 +1,6 @@
 TEST_TARGETS=$(shell ls test | sed 's|\([a-zA-Z_]\+\).cpp|bin/test/\1|')
-all: ${TEST_TARGETS}
+SRC_TARGETS=$(shell ls src | sed 's|\([a-zA-Z_]\+\).cpp|bin/\1|')
+all: ${TEST_TARGETS} ${SRC_TARGETS}
 
 CXFLAGS=-std=c++14 -Wall
 DEBUG ?= 1
