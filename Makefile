@@ -2,24 +2,20 @@ TEST_TARGETS=$(shell ls test | sed 's|\([a-zA-Z_]\+\).cpp|bin/test/\1|')
 all: ${TEST_TARGETS}
 
 INCLUDE=-I${CURDIR} -I${CURDIR}/minimap2 -I${CURDIR}/bpcqueue
-CXX=g++ -g -O0 -Wall ${INCLUDE}
+CXX=g++ -g -O0 -Wall -std=c++14 ${INCLUDE}
 
 HEADERS=$(wildcard include/*.hpp) $(wildcard mm2xx/*.hpp)
 
 MM2LIB=minimap2/libminimap2.a
-MM2LIB: $(wildcard minimap2/*.h) $(wildcard minimap2/*.c)
+${MM2LIB}: $(wildcard minimap2/*.h) $(wildcard minimap2/*.c)
 	cd minimap2 && make
 
-LIBS=-lm -lpthread -lz ${MM2LIB}
-
+LINK=-lm -lpthread -lz ${MM2LIB}
 OBJS=
 
-bin/test/%: test/%.cpp ${HEADERS} ${OBJS}
+bin/test/%: test/%.cpp ${HEADERS} ${OBJS} ${MM2LIB}
 	mkdir -p bin/test
-	${CXX} $< ${OBJS} ${LIBS} -o $@
-
-#src/%.o: src/%.cpp hice/%.hpp ${HEADERS}
-#	${CXX} ${CXFLAGS} ${INC} -c -o $@ $<
+	${CXX} $< ${OBJS} ${LINK} -o $@
 
 .PHONY: clean
 clean:
