@@ -25,6 +25,10 @@ bin/test/%: test/%.cpp ${HEADERS} ${OBJS} ${MM2LIB}
 	mkdir -p bin/test
 	${CXX} $< ${OBJS} ${LINK} -o $@
 
+bin/%: src/%.cpp ${HEADERS} ${OBJS} ${MM2LIB}
+	mkdir -p bin
+	${CXX} $< ${OBJS} ${LINK} -o $@
+
 .PHONY: clean
 clean:
 	rm -rf bin
