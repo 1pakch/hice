@@ -1,8 +1,10 @@
 // handles.cpp - smart-pointers wrapping minimap2 pointer types
 
 #pragma once
+
 #include <memory>
 #include <minimap.h>
+#include <cstdio>
 
 
 namespace mm {
@@ -23,7 +25,9 @@ template<> struct deallocate<mm_tbuf_t> {
 };
 
 template<> struct deallocate<mm_reg1_t> {
-    void operator()(mm_reg1_t *p) { std::free(p); }
+    void operator()(mm_reg1_t *p) {
+        std::free(p);
+    }
 };
 
 // Option structs will be allocated by us. Hence delegate to deleter.
@@ -41,7 +45,9 @@ template<typename T> struct destruct {
 
 //! mm_reg1_t contains a pointer to mm_extra_t that should be freed.
 template<> struct destruct<mm_reg1_t> {
-    void operator()(mm_reg1_t *p) { std::free(p->p); }
+    void operator()(mm_reg1_t *p) {
+        std::free(p->p);
+    }
 };
 
 } // namespace impl
@@ -53,21 +59,27 @@ class handle : public std::unique_ptr<T, impl::deallocate<T>> {
   private:
     using Base = std::unique_ptr<T, impl::deallocate<T>>;
 
+    void _destruct_contents() {
+        impl::destruct<T> destruct;
+        destruct(this->get());
+    }
+
   public:
     using std::unique_ptr<T, impl::deallocate<T>>::unique_ptr;
 
-    handle(handle &&v)
+    handle(handle &&v) noexcept
         : Base(std::move(v)) {}
 
-    handle &operator=(handle &&v) {
+    handle &operator=(handle &&v) noexcept {
+        _destruct_contents();
         Base::operator=(std::move(v));
         return *this;
     }
 
-    ~handle() {
-        impl::destruct<T> destruct;
-        destruct(this->get());
-    }
+    handle(const handle&) = delete;
+    handle &operator=(const handle&) = delete;
+
+    ~handle() { _destruct_contents(); }
 };
 
 //! unique_ptr for an array of pointers possibly destructing items
@@ -75,30 +87,36 @@ template<typename T>
 class handle<T[]> : public std::unique_ptr<T[], impl::deallocate<T>> {
   private:
     using Base = std::unique_ptr<T[], impl::deallocate<T>>;
-    size_t size_; // to be ignored if base pointer is null
+    size_t size_ = 0; // to be ignored if base pointer is null
+
+    void _destruct_contents() {
+        impl::destruct<T> destruct;
+        for (auto p = begin(); p < end(); ++p)
+            destruct(p);
+    }
 
   public:
     handle() {} // base pointer is null-initialized
 
-    handle(T *p, size_t size)
+    handle(T *p, size_t size) noexcept
         : Base(p)
         , size_(size) {}
 
-    handle(handle &&v)
+    handle(handle &&v) noexcept
         : Base(std::move(v))
         , size_(v.size_) {}
 
-    handle &operator=(handle &&v) {
+    handle &operator=(handle &&v) noexcept {
+        _destruct_contents();
         Base::operator=(std::move(v));
         size_ = v.size_;
         return *this;
     }
 
-    ~handle() {
-        impl::destruct<T> destruct;
-        for (auto p = begin(); p < end(); ++p)
-            destruct(p);
-    }
+    handle(const handle&) = delete;
+    handle &operator=(const handle&) = delete;
+
+    ~handle() { _destruct_contents(); } 
 
     size_t empty() const { return !this->get(); }
     size_t size() const { return empty() ? 0 : size_; }
