@@ -1,6 +1,5 @@
 #include <thread>
 #include <utility>
-#include <string_view>
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -100,7 +99,7 @@ int process(const Settings& settings, gzfile reads_file1, gzfile reads_file2,
 }
 
 bool has_fastq_extension(const char *path) {
-    auto path_ = std::string_view(path);
+    auto path_ = std::string(path);
     return path_.find("fq") >= 0 || path_.find("fastq") >= 0;
 }
 
