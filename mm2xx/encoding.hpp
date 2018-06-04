@@ -32,18 +32,56 @@ void encoding_check() {
     }
 }
 
-static void encode_str(encoded *dst, const ascii *start, const ascii *end,
-                       bool reverse_complement) {
-    if (!reverse_complement) {
+void encode_str(std::basic_string<encoded>& dst,
+                const std::basic_string<ascii>& src,
+                bool rc) {
+    if (dst.capacity() < src.size()) {
+        dst.reserve(src.size());
+        dst.resize(src.size());
+    }
+    auto pdst = &dst[0];
+    auto start = &src[0];
+    auto end = start + src.size();
+    if (!rc) {
         while (start < end)
-            *dst++ = encode(*start++);
+            *pdst++ = encode(*start++);
     } else {
         auto len = end - start;
-        dst += len - 1;
+        pdst += len - 1;
         while (start < end)
-            *dst-- = complement(encode(*start++));
+            *pdst-- = complement(encode(*start++));
     }
+    dst.resize(src.size());
 }
+
+std::basic_string<encoded> encode_str(const std::string& query, bool rc) {
+    std::basic_string<encoded> result;
+    encode_str(result, query, rc);
+    return std::move(result);
+}
+
+void decode_str(std::basic_string<ascii>& dst,
+                const std::basic_string<encoded>& src,
+                size_t istart=0, size_t iend=0) {
+    if (!iend) iend = src.size();
+    if (dst.capacity() < iend - istart) {
+        dst.reserve(iend - istart);
+    }
+    dst.resize(iend - istart);
+    auto pdst = &dst[0];
+    auto start = src.data() + istart;
+    auto end = src.data() + iend;
+    while (start < end)
+       *pdst++ = decode(*start++);
+}
+
+std::basic_string<ascii> decode_str(const std::basic_string<encoded>& src,
+                                    size_t istart=0, size_t iend=0) {
+    std::basic_string<ascii> result;
+    decode_str(result, src, istart, iend);
+    return std::move(result);
+}
+
 
 } // namespace enc
 

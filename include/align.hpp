@@ -1,6 +1,6 @@
 #include <string>
 #include <sstream>
-#include <cstdint>
+#include <cstdio>
 #include <iostream>
 
 #include <minimap2/minimap.h>
@@ -19,41 +19,50 @@ const std::string empty_string_;
 template<class Mapped=Mapped<>>
 class Aligned : public Mapped {
     using query_size_type = typename Mapped::query_size_type;
-    query_size_type ldist_; // Levenshtein distance
     query_size_type qlen_;  // Length of query string
+    query_size_type ldist_; // Levenshtein distance
     std::unique_ptr<std::string> cs_;
-    std::unique_ptr<std::string> qs_str_; // query_string[:qs_]
-    std::unique_ptr<std::string> qe_str_; // query_string[(qs_+qlen_):]
+    std::unique_ptr<std::string> qs_str_; // query[:qs_] where query is possibly rc-d
+    std::unique_ptr<std::string> qe_str_; // query[(qs_+qlen_):] where query is possibly rc-d
   public:
     Aligned()
         : Mapped() {}
 
-    Aligned(const std::string &query, const mm_reg1_t *reg, query_size_type ldist,
-            std::unique_ptr<std::string>&& cs)
-        : Mapped(query, reg)
-        , ldist_(ldist)
-        , qlen_(query.size())
-    {
-        auto n = query.size();
-        if (true)
-            cs_ = std::move(cs);
-        if (reg->qs != 0)
-            qs_str_ = std::make_unique<std::string>(query, 0, reg->qs);
-        if (reg->qe < qlen_)
-            qe_str_ = std::make_unique<std::string>(query, reg->qe, qlen_ - reg->qe);
-    }
+    Aligned(const mm_reg1_t *reg, query_size_type qlen)
+        : Mapped(reg)
+        , qlen_(qlen)
+    {}
 
     Aligned(Aligned&&) = default;
     Aligned& operator=(Aligned&&) = default;
+    Aligned(const Aligned&) = delete;
+    Aligned& operator=(const Aligned&) = delete;
 
     size_t ldist() const { return ldist_; }
+
+    size_t qstart() const { return qs_str_? qs_str_->size() : 0; }
+    size_t qend() const { return qlen() - (qe_str_? qe_str_->size() : 0); }
     size_t qlen() const { return qlen_; }
 
-    size_t qs() const { return qs_str_? qs_str_->size() : 0; }
-    size_t qe() const { return qlen() - (qe_str_? qe_str_->size() : 0); }
-    const std::string* cs() const { return cs_.get(); }
-    const std::string* qs_str() const { return qs_str_? qs_str_.get() : &empty_string_; }
-    const std::string* qe_str() const { return qe_str_? qe_str_.get() : &empty_string_; }
+    const std::string& cs() const { return cs_? *(cs_.get()) : empty_string_; }
+    const std::string& qs_str() const { return qs_str_? *(qs_str_.get()) : empty_string_; }
+    const std::string& qe_str() const { return qe_str_? *(qe_str_.get()) : empty_string_; }
+
+    void set_cs(std::string&& cs) {
+        cs_ = std::make_unique<std::string>(std::move(cs));
+    }
+
+    void set_qs(std::string&& qs) {
+        qs_str_ = std::make_unique<std::string>(std::move(qs));
+    }
+
+    void set_qe(std::string&& qe) {
+        qe_str_ = std::make_unique<std::string>(std::move(qe));
+    }
+
+    void set_ldist(size_t ldist) {
+        ldist_ = ldist;
+    }
 
 };
 #pragma pack(pop)
@@ -61,24 +70,11 @@ class Aligned : public Mapped {
 
 class AlignerBase: public MapperBase {
 
-    private:
-	std::basic_string<enc::encoded> ref_buf_;
-	std::basic_string<enc::encoded> query_buf_;
-
     protected:
+	std::basic_string<enc::encoded> ref_buf_;
+	std::basic_string<enc::encoded> qbuf_;
+
 	using MapperBase::MapperBase;
-
-	const auto ref_enc() const { return ref_buf_.data(); }
-	const auto query_enc() const { return query_buf_.data(); }
-
-	// Encode the whole query into the query buffer 
-	void load_query(std::string const& q, bool reverse_complement) {
-		query_buf_.reserve(q.size());
-		enc::encode_str(&query_buf_[0],
-				q.data(),
-				q.data() + q.size(),
-				reverse_complement);
-	}
 
 	// Encode the whole query into the query buffer 
 	void load_ref(uint8_t rid, uint32_t start, uint32_t end) {
@@ -96,12 +92,25 @@ class Aligner: public AlignerBase {
     Aligned<> map(std::string const& query) {
         auto hits = MapperBase::map(query);
         if (hits.size()) {
-            load_query(query, hits[0].rev);
-            load_ref(hits[0].rid, hits[0].rs, hits[0].re);
-            CsWriter csw(ref_enc(), query_enc(), hits[0].p);
-            unsigned char ldist = csw.align();
-            auto csp = csw.get_cs();
-            return Aligned<>(query, hits.get(), ldist, std::move(csp));
+            auto hit = hits[0];
+            auto qlen = query.size();
+            Aligned<> result(&hit, qlen); 
+            enc::encode_str(qbuf_, query, hit.rev);
+            load_ref(hit.rid, hit.rs, hit.re);
+            size_t offset = hit.rev ? query.size() - hit.qe : hit.qs;
+            //printf("rev=%d, qs=%d, qe=%d, qlen=%zd\n", hit.rev, hit.qs, hit.qe, qlen);
+            //fflush(stdout);
+            CigarIterator ci(&ref_buf_[0], &qbuf_[offset], hit.p);
+            CsStringWriter csw;
+            ci.map(csw);
+            result.set_ldist(ci.ldist());
+            if (ci.ldist())
+                result.set_cs(std::move(csw.result()));
+            if (hit.qs != 0)
+                result.set_qs(std::move(enc::decode_str(qbuf_, 0, hit.qs)));
+            if (hit.qe != qlen)
+                result.set_qe(std::move(enc::decode_str(qbuf_, hit.qe, qlen)));
+            return std::move(result);
         } else {
             return Aligned<>();
         }

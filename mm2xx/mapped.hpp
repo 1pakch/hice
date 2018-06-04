@@ -32,6 +32,7 @@ class Mapped {
 
     size_t rstart() const { return rs_; }
     size_t rend() const { return rs_ + rlen_; }
+    size_t rlen() const { return rlen_; }
 
     size_t mapq() const { return mapq_; }
     bool is_rc() const { return rc_; }
@@ -40,7 +41,7 @@ class Mapped {
 
     Mapped()
         : rid1_(0) {}
-    Mapped(const std::string &query, const mm_reg1_t *reg)
+    Mapped(const mm_reg1_t *reg)
         : rid1_(reg->rid + 1)
         , rs_(reg->rs)
         , rlen_(reg->re - reg->rs)

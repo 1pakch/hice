@@ -42,13 +42,14 @@ void print(Input<Alignment> alignments) {
     Alignment al;
     while (alignments.pop(al)) {
         if (al)
-            printf("%zd,\t%zd,\t%zd,\t%zd,\t%zd,\t%zd,\t%zd,\t%s,\t%s,\t%s\n",
-                    al.rid1(), al.rstart(), al.rend(), al.mapq(),
-                    al.qs(), al.qe(), al.ldist(),
-                    al.cs()->c_str(), al.qs_str()->c_str(), al.qe_str()->c_str()
-                        );
+            printf("%3zd %c %8zd:+%-3zd %2zd:+%-3zd q=%-2zd d=%-3zd cs=%s; qs=%s; qe=%s\n",
+                    al.rid1(),
+                    "+-"[al.is_rc()],
+                    al.rstart(), al.rlen(), al.qstart(), al.qend(),
+                    al.mapq(), al.ldist(),
+                    al.cs().c_str(), al.qs_str().c_str(), al.qe_str().c_str());
         else
-            printf("Unaligned\n");
+            printf("0\n");
     }
 }
 
@@ -90,6 +91,11 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "Usage: REFERENCE READS1 READS2\n");
 		return -1;
 	}
+
+        const char s[] = "NACGT";
+        for (int i=0; i < 5; ++i)
+            printf("%c=%d ", s[i], int(enc::encode(s[i])));
+        printf("\n");
 
 	Settings settings("sr");
 	settings.index_file(argv[1]);
