@@ -39,7 +39,7 @@ class Aligned : public Mapped {
             cs_ = std::move(cs);
         if (reg->qs != 0)
             qs_str_ = std::make_unique<std::string>(query, 0, reg->qs);
-        if (reg->qe != qlen_)
+        if (reg->qe < qlen_)
             qe_str_ = std::make_unique<std::string>(query, reg->qe, qlen_ - reg->qe);
     }
 
@@ -50,7 +50,7 @@ class Aligned : public Mapped {
     size_t qlen() const { return qlen_; }
 
     size_t qs() const { return qs_str_? qs_str_->size() : 0; }
-    size_t qe() const { return qe_str_? qe_str_->size() : 0; }
+    size_t qe() const { return qlen() - (qe_str_? qe_str_->size() : 0); }
     const std::string* cs() const { return cs_.get(); }
     const std::string* qs_str() const { return qs_str_? qs_str_.get() : &empty_string_; }
     const std::string* qe_str() const { return qe_str_? qe_str_.get() : &empty_string_; }
