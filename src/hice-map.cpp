@@ -1,5 +1,6 @@
 #include <thread>
 #include <utility>
+#include <string_view>
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -42,7 +43,7 @@ void print(Input<Alignment> alignments) {
     Alignment al;
     while (alignments.pop(al)) {
         if (al)
-            printf("%3zd  %c  %8zd:+%-3zd  %2zd:+%-3zd  q=%-2zd  d=%-3zd  cs=%s;  qs=%s;  qe=%s\n",
+            printf("%3zd  %c  %9zd:+%-3zd  %2zd:+%-3zd  q=%-2zd  d=%-3zd  cs=%s;  qs=%s;  qe=%s\n",
                     al.rid1(),
                     "+-"[al.is_rc()],
                     al.rstart(), al.rlen(), al.qstart(), al.qend(),
@@ -53,21 +54,32 @@ void print(Input<Alignment> alignments) {
     }
 }
 
-int process(const Settings& settings, gzfile reads_file1, gzfile reads_file2) {
-	Queue<std::string> chunks1(4), chunks2(4);
-	Queue<Read> reads1(100), reads2(100);
-        Queue<Pair<Read>> paired_reads(100);
-        Queue<Pair<Alignment>> paired_als(100);
-        Queue<Alignment> als(200);
+int process(const Settings& settings, gzfile reads_file1, gzfile reads_file2,
+            size_t n_threads, bool fastq) {
+	Queue<std::string> chunks1(8), chunks2(8);
+	Queue<Read> reads1(1024), reads2(1024);
+        Queue<Pair<Read>> paired_reads(1024);
+        Queue<Pair<Alignment>> paired_als(1024);
+        Queue<Alignment> als(1024);
+
+        std::thread parser1, parser2;
+        std::vector<std::thread> mappers;
 
         auto streamer1 = std::thread(gzstream, output(chunks1), std::move(reads_file1), 4096);
-	auto parser1 = std::thread(split_lines<2, 1>, input(chunks1), output(reads1));
+        if (fastq)
+	    parser1 = std::thread(split_lines<4, 1>, input(chunks1), output(reads1));
+        else
+	    parser1 = std::thread(split_lines<2, 1>, input(chunks1), output(reads1));
 
         auto streamer2 = std::thread(gzstream, output(chunks2), std::move(reads_file2), 4096);
-	auto parser2 = std::thread(split_lines<2, 1>, input(chunks2), output(reads2));
+        if (fastq)
+	    parser2 = std::thread(split_lines<4, 1>, input(chunks2), output(reads2));
+        else
+	    parser2 = std::thread(split_lines<2, 1>, input(chunks2), output(reads2));
         auto zipper = std::thread(pair<Read>, input(reads1), input(reads2), output(paired_reads));
-        
-        auto mapper = std::thread(align_paired, input(paired_reads), output(paired_als), std::ref(settings));
+        for (size_t i=0; i < n_threads; ++i)
+            mappers.emplace_back(align_paired, input(paired_reads), output(paired_als), std::ref(settings));
+
         auto unzipper = std::thread(unpair<Alignment>, input(paired_als), output(als));
 
 	auto printer = std::thread(print, input(als));
@@ -77,13 +89,20 @@ int process(const Settings& settings, gzfile reads_file1, gzfile reads_file2) {
 	parser1.join();
 	parser2.join();
 	zipper.join();
-	mapper.join();
+
+        for (size_t i=0; i < n_threads; ++i)
+	    mappers[i].join();
+
 	unzipper.join();
 	printer.join();
 
         return 0;
 }
 
+bool has_fastq_extension(const char *path) {
+    auto path_ = std::string_view(path);
+    return path_.find("fq") >= 0 || path_.find("fastq") >= 0;
+}
 
 int main(int argc, char *argv[])
 {
@@ -101,8 +120,10 @@ int main(int argc, char *argv[])
 	settings.index_file(argv[1]);
  
         process(settings,
-                std::move(gzfile(argv[2], "r", 4096)),
-                std::move(gzfile(argv[3], "r", 4096)));
+                std::move(gzfile(argv[2], "r", 2 << (12-1))),
+                std::move(gzfile(argv[3], "r", 2 << (12-1))),
+                has_fastq_extension(argv[2]),
+                4);
         
 
 	fflush(stdout);
