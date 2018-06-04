@@ -2,6 +2,8 @@
 
 #include <string>
 #include <utility>
+#include <vector>
+#include <cstdio>
 
 #include "hice/gzfile.hpp"
 
@@ -77,6 +79,64 @@ class buffered_reader {
 		}
 	}
 
+};
+
+
+class FastaParser {
+    private:
+	std::string buf_;
+	gzfile f_;
+
+	size_t get_next_chunk() {
+		auto raw_ptr = static_cast<void *>(const_cast<char *>(buf_.data()));
+		return f_.read(raw_ptr, buf_.capacity());
+	}
+
+    public:
+
+	FastaParser(const char* fname, size_t bufsize)
+		: f_(fname, "r", bufsize)
+	{
+		buf_.reserve(bufsize);
+	}
+
+        std::vector<std::string> get_sequences() {
+            size_t chunk_size;
+            bool at_description = true;
+            std::vector<std::string> sequences;
+            std::string seq;
+            while (chunk_size = get_next_chunk()) {
+                auto cur = &buf_[0];
+                auto end = cur + chunk_size;
+                while (cur < end) {
+                    if (at_description) {
+                        while (*cur != '\n' && cur < end)
+                            ++cur;
+                        if (*cur == '\n') {
+                            at_description = false;
+                            ++cur;
+                        }
+                    } else {
+                        while (*cur != '\n' && *cur != '>' && cur < end)
+                            seq.push_back(*cur++);
+                        if (*cur == '>') {
+                            at_description = true;
+                            sequences.push_back(std::move(seq));
+                            seq = std::string();
+                            ++cur;
+                        } else if (*cur == '\n') {
+                            ++cur;
+                        }
+                    }
+                }
+                if (chunk_size < buf_.capacity()) {
+                    if (!at_description && seq.size())
+                        sequences.push_back(std::move(seq));
+                    break;
+                }
+            }
+            return std::move(sequences);
+        }
 };
 
 }

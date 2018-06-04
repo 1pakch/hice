@@ -27,9 +27,13 @@ void align_paired(Input<Pair<Read>> paired_reads,
     Aligner a(settings);
     Pair<Read> paired_read;
     while (paired_reads.pop(paired_read)) {
+        auto r1 = paired_read.get_first();
+        auto r2 = paired_read.get_second();
+        //printf("1: %s\n", r1.c_str());
+        //printf("2: %s\n", r2.c_str());
         aligned_pairs.emplace(
-            std::move(a.map(paired_read.get_first())),
-            std::move(a.map(paired_read.get_second()))
+            std::move(a.map(std::move(r1))),
+            std::move(a.map(std::move(r2)))
         );
     }
 }
@@ -38,7 +42,7 @@ void print(Input<Alignment> alignments) {
     Alignment al;
     while (alignments.pop(al)) {
         if (al)
-            printf("%zd\t%zd\t%zd\t%zd\t%zd\t%zd\t%zd\t%s\t%s\t%s\n",
+            printf("%zd,\t%zd,\t%zd,\t%zd,\t%zd,\t%zd,\t%zd,\t%s,\t%s,\t%s\n",
                     al.rid1(), al.rstart(), al.rend(), al.mapq(),
                     al.qs(), al.qe(), al.ldist(),
                     al.cs()->c_str(), al.qs_str()->c_str(), al.qe_str()->c_str()

@@ -4,6 +4,7 @@
 
 #include <minimap.h>
 #include <mm2xx/handles.hpp>
+#include <include/fastx.hpp>
 
 
 namespace mm {
@@ -65,10 +66,20 @@ class Settings {
     const mm_idx_t *idx() const { return idx_.get(); }
 
     //! Index a FASTA file or read an existing index
+    // mm_idx_read1 does not process multi-sequences FASTA files
+    // https://github.com/lh3/minimap2/issues/173
+    /*
     void index_file(const char *path, size_t n_threads = 4) {
         idx_ = std::move(mm_idx_read1(path, idxopt(), n_threads));
         assert(idx_);
         mm_mapopt_update(mapopt_.get(), idx_.get());
+    }
+    */
+
+    //! Index a FASTA file or read an existing index
+    void index_file(const char *path) {
+        hc::FastaParser p(path, 1024*1024);
+        index_strings(std::move(p.get_sequences()));
     }
 
     //! Index strings in memory
@@ -81,6 +92,24 @@ class Settings {
         mm_mapopt_update(mapopt_.get(), idx);
         idx_ = std::move(handle<mm_idx_t>(idx));
     }
+
+    //! Index strings in memory
+    void index_strings(std::vector<std::string> sequences,
+                       const char **names = nullptr) {
+        const size_t n_seq = sequences.size();
+        const char *raw[n_seq];
+        for (size_t i=0; i < n_seq; ++i) {
+            raw[i] = sequences[i].c_str();
+        }
+        auto idx =
+            mm_idx_str(idxopt()->w, idxopt()->k, idxopt()->flag & MM_I_HPC,
+                       idxopt()->bucket_bits, n_seq, raw, names);
+        assert(idx);
+        assert(n_seq == idx->n_seq);
+        mm_mapopt_update(mapopt_.get(), idx);
+        idx_ = std::move(handle<mm_idx_t>(idx));
+    }
+
 };
 
 } // namespace mm
