@@ -32,8 +32,9 @@ void encoding_check() {
     }
 }
 
+template<class S>
 void encode_str(std::basic_string<encoded>& dst,
-                const std::basic_string<ascii>& src,
+                const S& src,
                 bool rc) {
     if (dst.capacity() < src.size()) {
         dst.reserve(src.size());
@@ -54,7 +55,8 @@ void encode_str(std::basic_string<encoded>& dst,
     dst.resize(src.size());
 }
 
-std::basic_string<encoded> encode_str(const std::string& query, bool rc) {
+template<class S>
+std::basic_string<encoded> encode_str(const S& query, bool rc) {
     std::basic_string<encoded> result;
     encode_str(result, query, rc);
     return std::move(result);

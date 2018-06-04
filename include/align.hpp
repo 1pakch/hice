@@ -94,28 +94,31 @@ class Aligner: public AlignerBase {
         if (hits.size()) {
             auto hit = hits[0];
             auto qlen = query.size();
+            //printf("rev=%d, qs=%d, qe=%d, qlen=%zd\n", hit.rev, hit.qs, hit.qe, qlen);
+            //fflush(stdout);
+            // aligned query coordinates relative to positive strand in ref
+            size_t qs = hit.rev ? query.size() - hit.qe : hit.qs;
+            size_t qe = hit.rev ? query.size() - hit.qs : hit.qe;
             Aligned<> result(&hit, qlen); 
             enc::encode_str(qbuf_, query, hit.rev);
             load_ref(hit.rid, hit.rs, hit.re);
-            size_t offset = hit.rev ? query.size() - hit.qe : hit.qs;
-            //printf("rev=%d, qs=%d, qe=%d, qlen=%zd\n", hit.rev, hit.qs, hit.qe, qlen);
-            //fflush(stdout);
-            CigarIterator ci(&ref_buf_[0], &qbuf_[offset], hit.p);
+            CigarIterator ci(&ref_buf_[0], &qbuf_[qs], hit.p);
             CsStringWriter csw;
             ci.map(csw);
             result.set_ldist(ci.ldist());
             if (ci.ldist())
                 result.set_cs(std::move(csw.result()));
-            if (hit.qs != 0)
-                result.set_qs(std::move(enc::decode_str(qbuf_, 0, hit.qs)));
-            if (hit.qe != qlen)
-                result.set_qe(std::move(enc::decode_str(qbuf_, hit.qe, qlen)));
+            if (qs != 0)
+                result.set_qs(std::move(enc::decode_str(qbuf_, 0, qs)));
+            if (qe != qlen)
+                result.set_qe(std::move(enc::decode_str(qbuf_, qe, qlen)));
             return std::move(result);
         } else {
             return Aligned<>();
         }
     }
 };
-
+// 12-345-6
+// 6-543-21
 
 } // namespace mm
