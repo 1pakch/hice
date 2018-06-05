@@ -127,8 +127,9 @@ class CigarIterator {
     template<class F>
     inline void process_match_or_mismatch(F& f, size_t len) {
         size_t n_matches = 0;
+        auto Nenc = enc::table_encode['N'];
         for (size_t i = 0; i < len; ++i) {
-            if (*qseq == *tseq) {
+            if (*qseq == *tseq || *tseq == Nenc || *qseq == Nenc) {
                 n_matches += 1;
             } else {
                 if (n_matches)
