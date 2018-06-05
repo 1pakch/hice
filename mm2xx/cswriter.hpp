@@ -71,7 +71,8 @@ class CigarIterator {
     const enc::encoded *qseq;
     const mm_extra_t *x;
 
-    size_t ldist_ = 0; // Levenshtein distance
+    size_t ldist_ = 0;  // Levenshtein distance
+    size_t qlen_ = 0;
 
   public:
     CigarIterator(const enc::encoded *tseq, const enc::encoded *qseq,
@@ -84,6 +85,7 @@ class CigarIterator {
     auto map(F& f) {
         int opcode;
         size_t len;
+        auto qstart = qseq;
         for (size_t i = 0; i < x->n_cigar; ++i) {
             parse_cigar(x->cigar[i], opcode, len);
             switch (opcode) {
@@ -108,9 +110,11 @@ class CigarIterator {
                     break;
             }
         }
+        qlen_ = qseq - qstart;
     }
 
     size_t ldist() const { return ldist_; }
+    size_t qlen() const { return qlen_; }
 
   private:
 

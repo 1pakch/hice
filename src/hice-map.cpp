@@ -49,10 +49,10 @@ void print(Input<Alignment> alignments) {
     Alignment al;
     while (alignments.pop(al)) {
         if (al)
-            printf("%3zd  %c  %9zd:+%-3zd  %2zd:+%-3zd  q=%-2zd  d=%-3zd  cs=%s;  qs=%s;  qe=%s\n",
+            printf("%3zd  %c  %9zd:+%-3zd  %2zd>%3zd<%-2zd  q=%-2zd  d=%-3zd  cs=%s;  qs=%s;  qe=%s\n",
                     al.rid1(),
                     "+-"[al.is_rc()],
-                    al.rstart(), al.rlen(), al.qstart(), al.qend(),
+                    al.rstart(), al.rlen(), al.qstart(), al.qlen(), al.qe_str().size(),
                     al.mapq(), al.ldist(),
                     al.cs().c_str(), al.qs_str().c_str(), al.qe_str().c_str());
         else
