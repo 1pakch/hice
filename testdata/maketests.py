@@ -14,19 +14,22 @@ def ch(s):
 
 
 refseqs = [s.rstrip() for s in open('ref.fa').readlines()[1::2]]
-out = open('refq.fa', 'w')
+fa = open('refq.fa', 'w')
+fq = open('refq.fq', 'w')
 
 for s in refseqs:
     for i, (rc_, oend, ostart) in enumerate(product((0, 1), (None, -4), (None, 5)), 1):
         label = str(i)
         q = s
         if ostart:
-            q = ch(q[:ostart]) + q[ostart:]
+            q = rc(q[:ostart]) + q[ostart:]
         if oend:
             q = q[:oend] + ch(q[oend:])
         if rc_:
             q = rc(q)
             label = 'r' + label
-        out.write('>%s\n%s\n' %(label, q))
+        fa.write('>%s\n%s\n' %(label, q))
+        fq.write('@%s\n%s\n+\nblbla\n' %(label, q))
 
-out.close()
+fa.close()
+fq.close()

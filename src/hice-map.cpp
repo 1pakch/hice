@@ -8,7 +8,9 @@
 #include <mm2xx/mappers.hpp>
 #include <hice/align.hpp>
 #include <hice/pair.hpp>
+#include <hice/fastx.hpp>
 #include <hice/gzstream.hpp>
+#include <hice/tagged.hpp>
 
 
 using namespace mm;
@@ -18,22 +20,8 @@ using namespace bpcqueue;
 
 using Read = std::string;
 using Alignment = Aligned<>;
+using Path = const char*;
 
-
-class StreamSequences {
-    Output<std::string> output_;
-  public:
-    StreamSequences(Output<std::string>&& output) : output_(std::move(output)) {}
-    void operator()(size_t n, std::string&& id, std::string&& seq) {
-        output_.push(std::move(seq));
-    }
-};
-
-void parse_fasta(const char* path, Output<std::string>&& output, size_t bufsize) {
-    StreamSequences ss(std::move(output));;
-    hc::FastaParser p(path, bufsize);
-    p.parse(ss);
-}
 
 
 void align_paired(Input<Pair<Read>> paired_reads,
@@ -45,8 +33,8 @@ void align_paired(Input<Pair<Read>> paired_reads,
     while (paired_reads.pop(paired_read)) {
         auto r1 = paired_read.get_first();
         auto r2 = paired_read.get_second();
-        printf("1: %s\n", r1.c_str());
-        printf("2: %s\n", r2.c_str());
+        //printf("1: %s\n", r1.c_str());
+        //printf("2: %s\n", r2.c_str());
         aligned_pairs.emplace(
             std::move(a.map(std::move(r1))),
             std::move(a.map(std::move(r2)))
@@ -69,8 +57,11 @@ void print(Input<Alignment> alignments) {
     }
 }
 
-int process(const Settings& settings, const char* reads1_path, const char* reads2_path,
-            size_t n_threads, bool fastq) {
+int process(const Settings& settings,
+            Tagged<Path, fastx::Format> reads1_path,
+            Tagged<Path, fastx::Format> reads2_path,
+            size_t n_threads) 
+{
 	Queue<Read> reads1(1024), reads2(1024);
         Queue<Pair<Read>> paired_reads(1024);
         Queue<Pair<Alignment>> paired_als(1024);
@@ -79,13 +70,8 @@ int process(const Settings& settings, const char* reads1_path, const char* reads
         std::thread parser1, parser2;
         std::vector<std::thread> mappers;
 
-        if (fastq) {
-	    parser1 = std::thread(parse_fasta, reads1_path, output(reads1), 10);
-	    parser2 = std::thread(parse_fasta, reads2_path, output(reads2), 10);
-        } else {
-	    parser1 = std::thread(parse_fasta, reads1_path, output(reads1), 10);
-	    parser2 = std::thread(parse_fasta, reads2_path, output(reads2), 10);
-        }
+        parser1 = std::thread(fastx::parse, reads1_path, output(reads1), 10);
+	parser2 = std::thread(fastx::parse, reads2_path, output(reads2), 10);
 
         auto zipper = std::thread(pair<Read>, input(reads1), input(reads2), output(paired_reads));
         for (size_t i=0; i < n_threads; ++i)
@@ -108,10 +94,6 @@ int process(const Settings& settings, const char* reads1_path, const char* reads
         return 0;
 }
 
-bool has_fastq_extension(const char *path) {
-    auto path_ = std::string(path);
-    return path_.find("fq") >= 0 || path_.find("fastq") >= 0;
-}
 
 int main(int argc, char *argv[])
 {
@@ -127,14 +109,21 @@ int main(int argc, char *argv[])
         printf("\n");
         */
 
+        const size_t n_threads = 1;
+
 	Settings settings("sr");
 	settings.index_file(argv[1], 10);
- 
+
+        auto reads1_tagged_path = tagged((Path) argv[2], fastx::guess_format(argv[2]));
+        auto reads2_tagged_path = tagged((Path) argv[3], fastx::guess_format(argv[3]));
+
+        assert(reads1_tagged_path.tag != fastx::Format::ambiguous);
+        assert(reads2_tagged_path.tag != fastx::Format::ambiguous);
+
         process(settings,
-                argv[2],
-                argv[3],
-                has_fastq_extension(argv[2]),
-                1);
+                reads1_tagged_path,
+                reads2_tagged_path,
+                n_threads);
         
 
 	fflush(stdout);
