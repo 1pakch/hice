@@ -82,10 +82,19 @@ class buffered_reader {
 };
 
 
+struct StoreSequences {
+    std::vector<std::string> sequences;
+    void operator()(size_t i, std::string&& id, std::string&& seq) {
+        sequences.push_back(std::move(seq));
+    }
+};
+
+
 class FastaParser {
     private:
 	std::string buf_;
 	gzfile f_;
+        size_t n_ = 0;
 
 	size_t get_next_chunk() {
 		auto raw_ptr = static_cast<void *>(const_cast<char *>(buf_.data()));
@@ -100,18 +109,20 @@ class FastaParser {
 		buf_.reserve(bufsize);
 	}
 
-        std::vector<std::string> get_sequences() {
+        template<class ProcessRecord>
+        void parse(ProcessRecord& process_record) {
             size_t chunk_size;
             bool at_description = true;
-            std::vector<std::string> sequences;
+            std::string id; 
             std::string seq;
-            while (chunk_size = get_next_chunk()) {
+            while ((chunk_size = get_next_chunk())) {
                 auto cur = &buf_[0];
                 auto end = cur + chunk_size;
                 while (cur < end) {
                     if (at_description) {
-                        while (*cur != '\n' && cur < end)
-                            ++cur;
+                        while (*cur != '\n' && cur < end) {
+                            id.push_back(*cur++);
+                        }
                         if (*cur == '\n') {
                             at_description = false;
                             ++cur;
@@ -120,9 +131,11 @@ class FastaParser {
                         while (*cur != '\n' && *cur != '>' && cur < end)
                             seq.push_back(*cur++);
                         if (*cur == '>') {
-                            at_description = true;
-                            sequences.push_back(std::move(seq));
+                            process_record(n_, std::move(id), std::move(seq));
+                            id = std::string();
                             seq = std::string();
+                            at_description = true;
+                            ++n_;
                             ++cur;
                         } else if (*cur == '\n') {
                             ++cur;
@@ -131,11 +144,10 @@ class FastaParser {
                 }
                 if (chunk_size < buf_.capacity()) {
                     if (!at_description && seq.size())
-                        sequences.push_back(std::move(seq));
+                        process_record(n_, std::move(id), std::move(seq));
                     break;
                 }
             }
-            return std::move(sequences);
         }
 };
 

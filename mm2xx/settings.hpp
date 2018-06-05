@@ -77,9 +77,11 @@ class Settings {
     */
 
     //! Index a FASTA file or read an existing index
-    void index_file(const char *path) {
-        hc::FastaParser p(path, 1024*1024);
-        index_strings(std::move(p.get_sequences()));
+    void index_file(const char *path, size_t bufsize) {
+        hc::StoreSequences ss;
+        hc::FastaParser p(path, bufsize);
+        p.parse(ss);
+        index_strings(std::move(ss.sequences));
     }
 
     //! Index strings in memory

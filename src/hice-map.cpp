@@ -20,6 +20,22 @@ using Read = std::string;
 using Alignment = Aligned<>;
 
 
+class StreamSequences {
+    Output<std::string> output_;
+  public:
+    StreamSequences(Output<std::string>&& output) : output_(std::move(output)) {}
+    void operator()(size_t n, std::string&& id, std::string&& seq) {
+        output_.push(std::move(seq));
+    }
+};
+
+void parse_fasta(const char* path, Output<std::string>&& output, size_t bufsize) {
+    StreamSequences ss(std::move(output));;
+    hc::FastaParser p(path, bufsize);
+    p.parse(ss);
+}
+
+
 void align_paired(Input<Pair<Read>> paired_reads,
          Output<Pair<Alignment>> aligned_pairs,
          const Settings& settings)
@@ -29,8 +45,8 @@ void align_paired(Input<Pair<Read>> paired_reads,
     while (paired_reads.pop(paired_read)) {
         auto r1 = paired_read.get_first();
         auto r2 = paired_read.get_second();
-        //printf("1: %s\n", r1.c_str());
-        //printf("2: %s\n", r2.c_str());
+        printf("1: %s\n", r1.c_str());
+        printf("2: %s\n", r2.c_str());
         aligned_pairs.emplace(
             std::move(a.map(std::move(r1))),
             std::move(a.map(std::move(r2)))
@@ -53,9 +69,8 @@ void print(Input<Alignment> alignments) {
     }
 }
 
-int process(const Settings& settings, gzfile reads_file1, gzfile reads_file2,
+int process(const Settings& settings, const char* reads1_path, const char* reads2_path,
             size_t n_threads, bool fastq) {
-	Queue<std::string> chunks1(8), chunks2(8);
 	Queue<Read> reads1(1024), reads2(1024);
         Queue<Pair<Read>> paired_reads(1024);
         Queue<Pair<Alignment>> paired_als(1024);
@@ -64,17 +79,14 @@ int process(const Settings& settings, gzfile reads_file1, gzfile reads_file2,
         std::thread parser1, parser2;
         std::vector<std::thread> mappers;
 
-        auto streamer1 = std::thread(gzstream, output(chunks1), std::move(reads_file1), 4096);
-        if (fastq)
-	    parser1 = std::thread(split_lines<4, 1>, input(chunks1), output(reads1));
-        else
-	    parser1 = std::thread(split_lines<2, 1>, input(chunks1), output(reads1));
+        if (fastq) {
+	    parser1 = std::thread(parse_fasta, reads1_path, output(reads1), 10);
+	    parser2 = std::thread(parse_fasta, reads2_path, output(reads2), 10);
+        } else {
+	    parser1 = std::thread(parse_fasta, reads1_path, output(reads1), 10);
+	    parser2 = std::thread(parse_fasta, reads2_path, output(reads2), 10);
+        }
 
-        auto streamer2 = std::thread(gzstream, output(chunks2), std::move(reads_file2), 4096);
-        if (fastq)
-	    parser2 = std::thread(split_lines<4, 1>, input(chunks2), output(reads2));
-        else
-	    parser2 = std::thread(split_lines<2, 1>, input(chunks2), output(reads2));
         auto zipper = std::thread(pair<Read>, input(reads1), input(reads2), output(paired_reads));
         for (size_t i=0; i < n_threads; ++i)
             mappers.emplace_back(align_paired, input(paired_reads), output(paired_als), std::ref(settings));
@@ -83,8 +95,6 @@ int process(const Settings& settings, gzfile reads_file1, gzfile reads_file2,
 
 	auto printer = std::thread(print, input(als));
 	
-	streamer1.join();
-	streamer2.join();
 	parser1.join();
 	parser2.join();
 	zipper.join();
@@ -110,19 +120,21 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
+        /*
         const char s[] = "NACGT";
         for (int i=0; i < 5; ++i)
             printf("%c=%d ", s[i], int(enc::encode(s[i])));
         printf("\n");
+        */
 
 	Settings settings("sr");
-	settings.index_file(argv[1]);
+	settings.index_file(argv[1], 10);
  
         process(settings,
-                std::move(gzfile(argv[2], "r", 2 << (12-1))),
-                std::move(gzfile(argv[3], "r", 2 << (12-1))),
+                argv[2],
+                argv[3],
                 has_fastq_extension(argv[2]),
-                4);
+                1);
         
 
 	fflush(stdout);
