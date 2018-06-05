@@ -5,3 +5,6 @@
 [submodule "bpcqueue"]
 	path = bpcqueue
 	url = git@github.com:ilya-kolpakov/bpcqueue
+[submodule "deps/cxxopts"]
+	path = deps/cxxopts
+	url = git@github.com:jarro2783/cxxopts.git

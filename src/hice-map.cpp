@@ -2,7 +2,10 @@
 #include <utility>
 #include <stdlib.h>
 #include <stdio.h>
+#include <iostream>
+#include <cassert>
 
+#include <cxxopts.hpp>
 #include <bpcqueue.hpp>
 
 #include <mm2xx/mappers.hpp>
@@ -97,35 +100,48 @@ int process(const Settings& settings,
 
 int main(int argc, char *argv[])
 {
-	if (argc != 4) {
-		fprintf(stderr, "Usage: REFERENCE READS1 READS2\n");
-		return -1;
-	}
 
-        /*
-        const char s[] = "NACGT";
-        for (int i=0; i < 5; ++i)
-            printf("%c=%d ", s[i], int(enc::encode(s[i])));
-        printf("\n");
-        */
+    cxxopts::Options options("hice-map", "Aligner for Hi-C data based on minimap2");
+    options
+        .positional_help("REFERENCE FILE1 FILE2")
+        .show_positional_help()
+        .add_options()
+            ("h,help", "Show this message and exit")
+            ("n,threads", "Number of worker threads", cxxopts::value<size_t>()->default_value("1"));
 
-        const size_t n_threads = 1;
+    options
+        .add_options("hidden")
+            ("files", "paths of FASTA/FASTQ files with reads", cxxopts::value<std::vector<std::string>>())
+        ;
+    options.parse_positional({"files"});
+    auto args = options.parse(argc, argv);
 
-	Settings settings("sr");
-	settings.index_file(argv[1], 10);
-
-        auto reads1_tagged_path = tagged((Path) argv[2], fastx::guess_format(argv[2]));
-        auto reads2_tagged_path = tagged((Path) argv[3], fastx::guess_format(argv[3]));
-
-        assert(reads1_tagged_path.tag != fastx::Format::ambiguous);
-        assert(reads2_tagged_path.tag != fastx::Format::ambiguous);
-
-        process(settings,
-                reads1_tagged_path,
-                reads2_tagged_path,
-                n_threads);
-        
-
-	fflush(stdout);
+    if (args.count("help")) {
+        std::cout << options.help({""}) << std::endl;
         return 0;
+    }
+   
+    const size_t n_threads = args["threads"].as<size_t>();
+    assert(n_threads > 0 && n_threads < 32);
+
+    auto files = args["files"].as<std::vector<std::string>>();
+    assert(files.size() == 3);
+    auto reads1_tagged_path = tagged((Path) files[1].c_str(), fastx::guess_format(files[1].c_str()));
+    auto reads2_tagged_path = tagged((Path) files[2].c_str(), fastx::guess_format(files[2].c_str()));
+    assert(reads1_tagged_path.tag != fastx::Format::ambiguous);
+    assert(reads2_tagged_path.tag != fastx::Format::ambiguous);
+    
+    std::cerr << "Parsing and indexing reference..." << '\n';
+    Settings settings("sr");
+    settings.index_file(files[0].c_str(), 10);
+
+    std::cerr << "Starting main loop" << '\n';
+    process(settings,
+            reads1_tagged_path,
+            reads2_tagged_path,
+            n_threads);
+    
+
+    fflush(stdout);
+    return 0;
 }

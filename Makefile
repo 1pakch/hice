@@ -10,7 +10,7 @@ else
     CXXFLAGS+=-O3 -DNDEBUG
 endif
 
-INCLUDE=-I${CURDIR} -I${CURDIR}/minimap2 -I${CURDIR}/bpcqueue
+INCLUDE=-I${CURDIR} -I${CURDIR}/minimap2 -I${CURDIR}/bpcqueue -I${CURDIR}/deps/cxxopts/include
 CXX=g++ ${CXXFLAGS} ${INCLUDE}
 
 HEADERS=$(wildcard include/*.hpp) $(wildcard mm2xx/*.hpp)
