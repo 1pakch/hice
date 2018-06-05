@@ -6,6 +6,7 @@
 #include <vector>
 #include <cstdio>
 #include <cassert>
+#include <regex>
 
 #include <bpcqueue.hpp>
 
@@ -19,18 +20,14 @@ namespace fastx {
 
 enum class Format { fasta, fastq, ambiguous };
 
+namespace impl {
+    static const std::regex fasta_path(R"(.*\.(fa|fasta)(.gz)?$)");
+    static const std::regex fastq_path(R"(.*\.(fq|fastq)(.gz)?$)");
+}
+
 Format guess_format(const char *path) {
-    std::string path_ = std::string(path);
-    auto pos_gz = path_.find(".gz");
-    if (pos_gz != std::string::npos)
-	path_ = std::string(path, pos_gz);
-    auto len = path_.size();
-    auto endswith = [&](auto pattern_) -> bool {
-	std::string pattern(pattern_);
-        return path_.find(pattern) == (len - pattern.size());
-    };
-    bool is_fasta = endswith(".fa") || endswith(".fasta");
-    bool is_fastq = endswith(".fq") || endswith(".fastq");
+    bool is_fasta = std::regex_match(path, impl::fasta_path);
+    bool is_fastq = std::regex_match(path, impl::fastq_path);
     if (is_fasta != is_fastq) return is_fasta ? Format::fasta : Format::fastq;
     else return Format::ambiguous;
 }

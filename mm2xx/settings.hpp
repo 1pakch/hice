@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include <cstdio>
+
 #include <minimap.h>
 #include <mm2xx/handles.hpp>
 #include <include/fastx.hpp>
@@ -81,7 +83,9 @@ class Settings {
         hc::fastx::StoreSequences stored;
         hc::fastx::SequenceExtractor<hc::fastx::StoreSequences> extractor(stored);
         hc::fastx::Parser<hc::fastx::Format::fasta> p(path, bufsize);
+	std::fprintf(stderr, "Parsing reference...\n");
         p.parse(extractor);
+	std::fprintf(stderr, "Indexing reference...\n");
         index_strings(std::move(stored.sequences));
     }
 

@@ -131,7 +131,6 @@ int main(int argc, char *argv[])
     assert(reads1_tagged_path.tag != fastx::Format::ambiguous);
     assert(reads2_tagged_path.tag != fastx::Format::ambiguous);
     
-    std::cerr << "Parsing and indexing reference..." << '\n';
     Settings settings("sr");
     settings.index_file(files[0].c_str(), 10);
 
