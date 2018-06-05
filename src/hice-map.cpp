@@ -47,17 +47,21 @@ void align_paired(Input<Pair<Read>> paired_reads,
 
 void print(Input<Alignment> alignments) {
     Alignment al;
+    size_t n = 0;
     while (alignments.pop(al)) {
         if (al)
-            printf("%3zd  %c  %9zd:+%-3zd  %2zd>%3zd<%-2zd  q=%-2zd  d=%-3zd  cs=%s;  qs=%s;  qe=%s\n",
-                    al.rid1(),
+            printf("R%1zd>  %3zd  %c  %9zd:+%-3zd  %2zd>%3zd<%-2zd  q=%-2zd  d=%-3zd  cs=%s;  qs=%s;  qe=%s\n",
+                    n % 2 + 1,
+		    al.rid1(),
                     "+-"[al.is_rc()],
                     al.rstart(), al.rlen(), al.qstart(), al.qlen(), al.qe_str().size(),
                     al.mapq(), al.ldist(),
                     al.cs().c_str(), al.qs_str().c_str(), al.qe_str().c_str());
         else
-            printf("  0\n");
+            printf("R%1zd>    0\n", n % 2 + 1);
+	++n;
     }
+    fprintf(stderr, "Processed %zd reads (%zd pairs)\n", n, n/2);
 }
 
 int process(const Settings& settings,
