@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <cstring>
 #include <utility>
 #include <vector>
 #include <cstdio>
@@ -19,12 +20,17 @@ namespace fastx {
 enum class Format { fasta, fastq, ambiguous };
 
 Format guess_format(const char *path) {
-    auto path_ = std::string(path);
-    auto contains = [&](auto pattern) {
-        return path_.find(pattern) != std::string::npos;
+    std::string path_ = std::string(path);
+    auto pos_gz = path_.find(".gz");
+    if (pos_gz != std::string::npos)
+	path_ = std::string(path, pos_gz);
+    auto len = path_.size();
+    auto endswith = [&](auto pattern_) -> bool {
+	std::string pattern(pattern_);
+        return path_.find(pattern) == (len - pattern.size());
     };
-    bool is_fasta = contains(".fa") || contains(".fasta");
-    bool is_fastq = contains(".fq") || contains(".fastq");
+    bool is_fasta = endswith(".fa") || endswith(".fasta");
+    bool is_fastq = endswith(".fq") || endswith(".fastq");
     if (is_fasta != is_fastq) return is_fasta ? Format::fasta : Format::fastq;
     else return Format::ambiguous;
 }
